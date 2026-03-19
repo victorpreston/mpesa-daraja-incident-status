@@ -36,11 +36,11 @@ services:
     container_name: daraja-redis
     ports:
       - '6379:6379'
-    command: redis-server --appendonly yes --requirepass redis_password
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
     volumes:
       - redis_data:/data
     environment:
-      REDIS_PASSWORD: redis_password
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
     healthcheck:
       test: redis-cli ping
       interval: 10s
@@ -57,15 +57,15 @@ services:
     ports:
       - '5432:5432'
     environment:
-      POSTGRES_DB: daraja_db
-      POSTGRES_USER: daraja_user
-      POSTGRES_PASSWORD: daraja_password
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_INITDB_ARGS: '-c max_connections=200'
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/01-init.sql
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U daraja_user -d daraja_db']
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}']
       interval: 10s
       timeout: 5s
       retries: 5

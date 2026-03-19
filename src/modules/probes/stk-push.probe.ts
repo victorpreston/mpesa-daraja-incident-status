@@ -29,7 +29,7 @@ export class StkPushProbe implements ProbeRunner {
 
     try {
       const token = await this.darajaToken.getToken();
-      const shortcode = this.config.get<string>('DARAJA_SHORTCODE')!;
+      const shortcode = this.config.get<string>('DARAJA_STK_SHORTCODE')!;
       const timestamp = new Date()
         .toISOString()
         .replace(/[^0-9]/g, '')
@@ -49,7 +49,7 @@ export class StkPushProbe implements ProbeRunner {
           PartyA: '254708374149',
           PartyB: shortcode,
           PhoneNumber: '254708374149',
-          CallBackURL: `${this.config.get<string>('CALLBACK_BASE_URL')}/daraja/callback`,
+          CallBackURL: this.config.get<string>('DARAJA_CALLBACK_URL')!,
           AccountReference: 'ProbeCheck',
           TransactionDesc: 'Probe',
         },

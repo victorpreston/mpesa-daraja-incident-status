@@ -41,10 +41,8 @@ export class AccountBalanceProbe implements ProbeRunner {
           PartyA: shortcode,
           IdentifierType: '4',
           Remarks: 'Probe',
-          QueueTimeOutURL:
-            this.config.get<string>('CALLBACK_BASE_URL') + '/daraja/callback',
-          ResultURL:
-            this.config.get<string>('CALLBACK_BASE_URL') + '/daraja/callback',
+          QueueTimeOutURL: this.config.get<string>('DARAJA_CALLBACK_URL')!,
+          ResultURL: this.config.get<string>('DARAJA_CALLBACK_URL')!,
         },
         { headers: this.darajaToken.headers(token), timeout: 15000 },
       );

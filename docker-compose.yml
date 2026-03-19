@@ -1,8 +1,6 @@
-version: '3.8'
-
 services:
   redpanda:
-    image: docker.redpanda.com/redpandadata/redpanda:v23.3.0
+    image: docker.redpanda.com/redpandadata/redpanda:latest
     command:
       - redpanda
       - start
@@ -35,7 +33,7 @@ services:
     image: redis:7-alpine
     container_name: daraja-redis
     ports:
-      - '6379:6379'
+      - '6380:6379'
     command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
     volumes:
       - redis_data:/data
@@ -52,7 +50,7 @@ services:
     restart: unless-stopped
 
   postgres:
-    image: postgres:16-alpine
+    image: timescale/timescaledb:latest-pg16
     container_name: daraja-postgres
     ports:
       - '5432:5432'

@@ -1,7 +1,11 @@
-import { AxiosInstance, AxiosError } from 'axios';
+import { AxiosInstance, AxiosError, InternalAxiosRequestConfig } from 'axios';
 import { DarajaMonitorOptions, ErrorType } from './types';
 import { detectEndpoint, detectEnvironment, isSafaricomUrl } from './utils';
 import { sendReport } from './reporter';
+
+interface MonitoredConfig extends InternalAxiosRequestConfig {
+  __darajaMonitorStart?: number;
+}
 
 export function attachDarajaMonitor(
   axiosInstance: AxiosInstance,
@@ -9,9 +13,9 @@ export function attachDarajaMonitor(
 ): void {
   if (options.enabled === false) return;
 
-  axiosInstance.interceptors.request.use((config) => {
+  axiosInstance.interceptors.request.use((config: MonitoredConfig) => {
     if (config.url && isSafaricomUrl(config.url)) {
-      (config as Record<string, unknown>)['__darajaMonitorStart'] = Date.now();
+      config.__darajaMonitorStart = Date.now();
     }
     return config;
   });
@@ -22,14 +26,16 @@ export function attachDarajaMonitor(
       const url = error.config?.url ?? '';
       if (!isSafaricomUrl(url)) return Promise.reject(error);
 
-      const start =
-        ((error.config as Record<string, unknown>)?.['__darajaMonitorStart'] as number) ??
-        Date.now();
+      const monitoredConfig = error.config as MonitoredConfig | undefined;
+      const start = monitoredConfig?.__darajaMonitorStart ?? Date.now();
       const latencyMs = Date.now() - start;
       const statusCode = error.response?.status;
 
       let errorType: ErrorType;
-      if (error.code === 'ECONNABORTED' || (error.message ?? '').includes('timeout')) {
+      if (
+        error.code === 'ECONNABORTED' ||
+        (error.message ?? '').includes('timeout')
+      ) {
         errorType = 'timeout';
       } else if (statusCode === 401 || statusCode === 403) {
         errorType = 'auth_error';

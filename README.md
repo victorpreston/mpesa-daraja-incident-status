@@ -68,6 +68,9 @@ Incidents open and resolve automatically based on probe results — no manual in
 **Multi-channel notifications**
 A single subscriber can receive alerts on all four channels simultaneously. The notifier fan-out is per-channel and each delivery is logged individually.
 
+**Community telemetry via SDK**
+Developers building on Daraja can install `daraja-monitor-sdk` to anonymously contribute real production failure data. Reports flow through the same Kafka aggregator pipeline and influence health scores alongside synthetic probes.
+
 ---
 
 ## API Documentation
@@ -82,6 +85,7 @@ Swagger UI is available at `/docs` when the server is running.
 | `POST` | `/subscribe` | Register a new subscriber |
 | `DELETE` | `/subscribe/:id` | Deactivate a subscriber |
 | `POST` | `/daraja/callback` | Daraja M-Pesa callback receiver |
+| `POST` | `/telemetry` | Ingest anonymous failure report from SDK |
 
 ---
 
@@ -129,6 +133,14 @@ npm run start:dev
 | `PROBE_INTERVAL_SECONDS` | How often probes run (default: `30`) |
 | `PROBE_FAILURE_THRESHOLD` | Consecutive failures before incident opens (default: `3`) |
 | `PROBE_ENABLED` | Set to `false` to disable probing entirely |
+
+---
+
+## Community SDK
+
+Developers building on Daraja can install [`daraja-monitor-sdk`](sdk/README.md) to anonymously contribute real production failure data to this system. Reports flow through the same aggregator pipeline and enrich health scores alongside synthetic probes.
+
+See [`sdk/README.md`](sdk/README.md) for installation and usage.
 
 ---
 

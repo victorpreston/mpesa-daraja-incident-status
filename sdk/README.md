@@ -1,10 +1,12 @@
 # daraja-monitor-sdk
 
-Report Daraja M-Pesa API failures anonymously to help power a community-driven [Safaricom Daraja status page](https://github.com/victorpreston/daraja-incident-status).
+A zero-config Axios interceptor that anonymously reports Daraja M-Pesa API failures to the community-driven [Safaricom Daraja Incident Status](https://github.com/victorpreston/daraja-incident-status) platform.
 
-When your app encounters a Daraja timeout or error, the SDK sends a lightweight, anonymous report to the central server. These reports are aggregated alongside synthetic probes to produce a more accurate, real-world picture of Daraja's health.
+![SDK Architecture](../docs/daraja_sdk_architecture_fixed.svg)
 
-**No transaction data is ever sent.** Only: which endpoint failed, the error type, and the latency.
+When your app encounters a Daraja timeout or HTTP error, the SDK silently forwards a lightweight, anonymous report to the central server. These reports are aggregated alongside synthetic probes to produce a more accurate, real-world picture of Daraja's health — powered by actual production traffic from across the ecosystem.
+
+> **Privacy first.** No transaction data is ever collected. The SDK only sends: which endpoint failed, the error category, latency in milliseconds, and the Daraja environment (`sandbox` or `production`).
 
 ---
 

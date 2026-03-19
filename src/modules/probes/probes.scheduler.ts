@@ -35,9 +35,18 @@ export class ProbesScheduler implements OnModuleInit {
     const enabled = this.config.get<string>('PROBE_ENABLED') !== 'false';
     if (!enabled) return;
 
-    const delay = this.config.get<number>('PROBE_START_DELAY_MS') ?? 5000;
-    const interval =
-      (this.config.get<number>('PROBE_INTERVAL_SECONDS') ?? 30) * 1000;
+    const delay = Math.max(
+      0,
+      parseInt(this.config.get<string>('PROBE_START_DELAY_MS') ?? '5000', 10) ||
+        5000,
+    );
+    const interval = Math.max(
+      5000,
+      (parseInt(
+        this.config.get<string>('PROBE_INTERVAL_SECONDS') ?? '30',
+        10,
+      ) || 30) * 1000,
+    );
 
     setTimeout(() => {
       void this.runAll();

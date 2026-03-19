@@ -2,7 +2,10 @@ import { IsIn, IsOptional, IsUUID } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
 export class QueryIncidentsDto {
-  @ApiPropertyOptional({ description: 'Filter by service UUID', format: 'uuid' })
+  @ApiPropertyOptional({
+    description: 'Filter by service UUID',
+    format: 'uuid',
+  })
   @IsOptional()
   @IsUUID()
   serviceId?: string;

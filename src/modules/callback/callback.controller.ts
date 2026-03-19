@@ -33,7 +33,10 @@ export class CallbackController {
   @ApiResponse({
     status: 200,
     description: 'Callback accepted.',
-    schema: { type: 'object', properties: { ResultCode: { type: 'number', example: 0 } } },
+    schema: {
+      type: 'object',
+      properties: { ResultCode: { type: 'number', example: 0 } },
+    },
   })
   async handleCallback(
     @Body() body: Record<string, unknown>,

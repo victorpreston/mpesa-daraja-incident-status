@@ -24,7 +24,8 @@ export class AggregatorService implements OnModuleInit {
   ) {}
 
   async onModuleInit() {
-    const group = this.config.get<string>('KAFKA_CONSUMER_GROUP') ?? 'aggregator';
+    const group =
+      this.config.get<string>('KAFKA_CONSUMER_GROUP') ?? 'aggregator';
     await this.kafka.subscribe(
       `${group}-aggregator`,
       TOPICS.PROBE_RESULT,
@@ -37,7 +38,7 @@ export class AggregatorService implements OnModuleInit {
   private async handleProbeResult(event: ProbeResultEvent): Promise<void> {
     if (!event.serviceId) return;
 
-    const failures = (this.failureWindows.get(event.serviceId) ?? 0);
+    const failures = this.failureWindows.get(event.serviceId) ?? 0;
     const updatedFailures = event.status === 'failure' ? failures + 1 : 0;
     this.failureWindows.set(event.serviceId, updatedFailures);
 
@@ -66,13 +67,15 @@ export class AggregatorService implements OnModuleInit {
       .first();
 
     const successCount = existing
-      ? (existing.success_count as number) + (event.status === 'success' ? 1 : 0)
+      ? (existing.success_count as number) +
+        (event.status === 'success' ? 1 : 0)
       : event.status === 'success'
         ? 1
         : 0;
 
     const totalFailures = existing
-      ? (existing.failure_count as number) + (event.status === 'failure' ? 1 : 0)
+      ? (existing.failure_count as number) +
+        (event.status === 'failure' ? 1 : 0)
       : event.status === 'failure'
         ? 1
         : 0;
@@ -103,9 +106,7 @@ export class AggregatorService implements OnModuleInit {
     event: ProbeResultEvent,
     failureCount: number,
   ): Promise<void> {
-    const severity = determineSeverity(
-      computeHealthScore(0, failureCount),
-    );
+    const severity = determineSeverity(computeHealthScore(0, failureCount));
 
     const [incident] = await this.postgres
       .db('daraja.incidents')
@@ -122,7 +123,10 @@ export class AggregatorService implements OnModuleInit {
     await this.postgres
       .db('daraja.services')
       .where({ id: event.serviceId })
-      .update({ status: severity === 'critical' ? 'major_outage' : 'degraded_performance' });
+      .update({
+        status:
+          severity === 'critical' ? 'major_outage' : 'degraded_performance',
+      });
 
     const incidentRecord = incident as Record<string, unknown>;
 

@@ -25,7 +25,10 @@ export class SubscribersService {
   }
 
   async findOne(id: string): Promise<Subscriber | null> {
-    const row = await this.postgres.db('daraja.subscribers').where({ id }).first();
+    const row = await this.postgres
+      .db('daraja.subscribers')
+      .where({ id })
+      .first();
     return (row as Subscriber) ?? null;
   }
 

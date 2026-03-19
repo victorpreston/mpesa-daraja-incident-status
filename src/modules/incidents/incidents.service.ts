@@ -8,7 +8,9 @@ export class IncidentsService {
   constructor(private readonly postgres: PostgresService) {}
 
   async findAll(query: QueryIncidentsDto): Promise<Incident[]> {
-    const builder = this.postgres.db('daraja.incidents').orderBy('started_at', 'desc');
+    const builder = this.postgres
+      .db('daraja.incidents')
+      .orderBy('started_at', 'desc');
     if (query.serviceId) builder.where({ service_id: query.serviceId });
     if (query.status) builder.where({ status: query.status });
     if (query.severity) builder.where({ severity: query.severity });
@@ -16,7 +18,10 @@ export class IncidentsService {
   }
 
   async findOne(id: string): Promise<Incident | null> {
-    const row = await this.postgres.db('daraja.incidents').where({ id }).first();
+    const row = await this.postgres
+      .db('daraja.incidents')
+      .where({ id })
+      .first();
     return (row as Incident) ?? null;
   }
 

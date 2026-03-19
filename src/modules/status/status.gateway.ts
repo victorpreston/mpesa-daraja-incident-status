@@ -1,8 +1,5 @@
 import { Logger, OnModuleInit } from '@nestjs/common';
-import {
-  WebSocketGateway,
-  WebSocketServer,
-} from '@nestjs/websockets';
+import { WebSocketGateway, WebSocketServer } from '@nestjs/websockets';
 import { Server } from 'socket.io';
 import { RedisService } from '../redis/redis.service';
 

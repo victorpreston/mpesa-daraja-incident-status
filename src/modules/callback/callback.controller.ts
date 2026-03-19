@@ -7,7 +7,9 @@ export class CallbackController {
 
   @Post('callback')
   @HttpCode(200)
-  async handleCallback(@Body() body: Record<string, unknown>): Promise<{ ResultCode: number }> {
+  async handleCallback(
+    @Body() body: Record<string, unknown>,
+  ): Promise<{ ResultCode: number }> {
     await this.callbackService.handle(body);
     return { ResultCode: 0 };
   }

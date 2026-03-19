@@ -16,8 +16,12 @@ export class StatusService {
     if (cached) return JSON.parse(cached) as Record<string, unknown>;
 
     const services = await this.postgres.db('daraja.services').select('*');
-    const scores = await this.postgres.db('daraja.aggregator_scores').select('*');
-    const active = await this.incidents.findAll({ status: 'investigating' } as never);
+    const scores = await this.postgres
+      .db('daraja.aggregator_scores')
+      .select('*');
+    const active = await this.incidents.findAll({
+      status: 'investigating',
+    } as never);
 
     const summary = {
       updated_at: new Date().toISOString(),

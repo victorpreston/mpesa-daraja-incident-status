@@ -44,23 +44,37 @@ export class NotifierService implements OnModuleInit {
     );
   }
 
-  private async handleIncidentCreated(event: IncidentCreatedEvent): Promise<void> {
+  private async handleIncidentCreated(
+    event: IncidentCreatedEvent,
+  ): Promise<void> {
     const subscribers = await this.getActiveSubscribers(event.serviceId);
     const subject = `[${event.severity.toUpperCase()}] ${event.title}`;
     const body = `Incident detected on ${event.serviceName}.\nStatus: ${event.status}\nStarted: ${event.startedAt}`;
 
     for (const sub of subscribers) {
-      await this.dispatch(sub as Record<string, unknown>, event.incidentId, subject, body);
+      await this.dispatch(
+        sub as Record<string, unknown>,
+        event.incidentId,
+        subject,
+        body,
+      );
     }
   }
 
-  private async handleIncidentResolved(event: IncidentResolvedEvent): Promise<void> {
+  private async handleIncidentResolved(
+    event: IncidentResolvedEvent,
+  ): Promise<void> {
     const subscribers = await this.getActiveSubscribers(event.serviceId);
     const subject = `[RESOLVED] ${event.serviceId} incident resolved`;
     const body = `The incident on service ${event.serviceId} has been resolved.\nResolved at: ${event.resolvedAt}`;
 
     for (const sub of subscribers) {
-      await this.dispatch(sub as Record<string, unknown>, event.incidentId, subject, body);
+      await this.dispatch(
+        sub as Record<string, unknown>,
+        event.incidentId,
+        subject,
+        body,
+      );
     }
   }
 
@@ -68,9 +82,10 @@ export class NotifierService implements OnModuleInit {
     return this.postgres
       .db('daraja.subscribers')
       .where({ is_active: true })
-      .whereRaw('? = ANY(subscribed_services) OR array_length(subscribed_services, 1) IS NULL', [
-        serviceId,
-      ]);
+      .whereRaw(
+        '? = ANY(subscribed_services) OR array_length(subscribed_services, 1) IS NULL',
+        [serviceId],
+      );
   }
 
   private async dispatch(
@@ -84,13 +99,18 @@ export class NotifierService implements OnModuleInit {
     if (sub['email']) {
       channels.push({
         channel: 'email',
-        fn: () => this.email.send(String(sub['email']), subject, `<pre>${body}</pre>`),
+        fn: () =>
+          this.email.send(String(sub['email']), subject, `<pre>${body}</pre>`),
       });
     }
     if (sub['slack_webhook_url']) {
       channels.push({
         channel: 'slack',
-        fn: () => this.slack.send(String(sub['slack_webhook_url']), `*${subject}*\n${body}`),
+        fn: () =>
+          this.slack.send(
+            String(sub['slack_webhook_url']),
+            `*${subject}*\n${body}`,
+          ),
       });
     }
     if (sub['discord_webhook_url']) {

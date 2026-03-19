@@ -3,7 +3,10 @@ export const HEALTH_SCORE_DEGRADED_THRESHOLD = 70;
 export const HEALTH_SCORE_OUTAGE_THRESHOLD = 40;
 export const WINDOW_SECONDS = 300;
 
-export function computeHealthScore(successCount: number, failureCount: number): number {
+export function computeHealthScore(
+  successCount: number,
+  failureCount: number,
+): number {
   const total = successCount + failureCount;
   if (total === 0) return 100;
   return Math.round((successCount / total) * 100);

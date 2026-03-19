@@ -28,8 +28,10 @@ export class AccountBalanceProbe implements ProbeRunner {
       const response = await axios.post<Record<string, unknown>>(
         'https://sandbox.safaricom.co.ke/mpesa/accountbalance/v1/query',
         {
-          Initiator: 'testapi',
-          SecurityCredential: 'probe',
+          Initiator: this.config.get<string>('DARAJA_INITIATOR_NAME')!,
+          SecurityCredential: this.config.get<string>(
+            'DARAJA_SECURITY_CREDENTIAL',
+          )!,
           CommandID: 'AccountBalance',
           PartyA: shortcode,
           IdentifierType: '4',
@@ -50,7 +52,14 @@ export class AccountBalanceProbe implements ProbeRunner {
       }
     } catch (err: unknown) {
       status = 'failure';
-      if (err instanceof Error) errorMessage = err.message;
+      if (axios.isAxiosError(err)) {
+        errorMessage = err.message;
+        responseBody = err.response?.data as
+          | Record<string, unknown>
+          | undefined;
+      } else if (err instanceof Error) {
+        errorMessage = err.message;
+      }
     }
 
     const latencyMs = Date.now() - start;

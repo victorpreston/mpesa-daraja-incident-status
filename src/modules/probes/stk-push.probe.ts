@@ -29,8 +29,9 @@ export class StkPushProbe implements ProbeRunner {
         .toISOString()
         .replace(/[^0-9]/g, '')
         .slice(0, 14);
+      const passkey = this.config.get<string>('DARAJA_PASSKEY')!;
       const password = Buffer.from(
-        `${shortcode}${shortcode}${timestamp}`,
+        `${shortcode}${passkey}${timestamp}`,
       ).toString('base64');
       const response = await axios.post<Record<string, unknown>>(
         'https://sandbox.safaricom.co.ke/mpesa/stkpush/v1/processrequest',
@@ -60,7 +61,14 @@ export class StkPushProbe implements ProbeRunner {
       }
     } catch (err: unknown) {
       status = 'failure';
-      if (err instanceof Error) errorMessage = err.message;
+      if (axios.isAxiosError(err)) {
+        errorMessage = err.message;
+        responseBody = err.response?.data as
+          | Record<string, unknown>
+          | undefined;
+      } else if (err instanceof Error) {
+        errorMessage = err.message;
+      }
     }
 
     const latencyMs = Date.now() - start;

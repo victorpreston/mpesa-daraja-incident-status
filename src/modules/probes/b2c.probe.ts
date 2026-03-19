@@ -29,8 +29,10 @@ export class B2cProbe implements ProbeRunner {
         'https://sandbox.safaricom.co.ke/mpesa/b2c/v3/paymentrequest',
         {
           OriginatorConversationID: `probe-${Date.now()}`,
-          InitiatorName: 'testapi',
-          SecurityCredential: 'probe',
+          InitiatorName: this.config.get<string>('DARAJA_INITIATOR_NAME')!,
+          SecurityCredential: this.config.get<string>(
+            'DARAJA_SECURITY_CREDENTIAL',
+          )!,
           CommandID: 'BusinessPayment',
           Amount: 1,
           PartyA: shortcode,
@@ -53,7 +55,14 @@ export class B2cProbe implements ProbeRunner {
       }
     } catch (err: unknown) {
       status = 'failure';
-      if (err instanceof Error) errorMessage = err.message;
+      if (axios.isAxiosError(err)) {
+        errorMessage = err.message;
+        responseBody = err.response?.data as
+          | Record<string, unknown>
+          | undefined;
+      } else if (err instanceof Error) {
+        errorMessage = err.message;
+      }
     }
 
     const latencyMs = Date.now() - start;

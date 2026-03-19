@@ -28,8 +28,10 @@ export class ReversalProbe implements ProbeRunner {
       const response = await axios.post<Record<string, unknown>>(
         'https://sandbox.safaricom.co.ke/mpesa/reversal/v1/request',
         {
-          Initiator: 'testapi',
-          SecurityCredential: 'probe',
+          Initiator: this.config.get<string>('DARAJA_INITIATOR_NAME')!,
+          SecurityCredential: this.config.get<string>(
+            'DARAJA_SECURITY_CREDENTIAL',
+          )!,
           CommandID: 'TransactionReversal',
           TransactionID: 'PROBE00000',
           Amount: 1,
@@ -53,7 +55,14 @@ export class ReversalProbe implements ProbeRunner {
       }
     } catch (err: unknown) {
       status = 'failure';
-      if (err instanceof Error) errorMessage = err.message;
+      if (axios.isAxiosError(err)) {
+        errorMessage = err.message;
+        responseBody = err.response?.data as
+          | Record<string, unknown>
+          | undefined;
+      } else if (err instanceof Error) {
+        errorMessage = err.message;
+      }
     }
 
     const latencyMs = Date.now() - start;

@@ -34,7 +34,14 @@ export class OauthProbe implements ProbeRunner {
       responseBody = response.data;
     } catch (err: unknown) {
       status = 'failure';
-      if (err instanceof Error) errorMessage = err.message;
+      if (axios.isAxiosError(err)) {
+        errorMessage = err.message;
+        responseBody = err.response?.data as
+          | Record<string, unknown>
+          | undefined;
+      } else if (err instanceof Error) {
+        errorMessage = err.message;
+      }
     }
 
     const latencyMs = Date.now() - start;

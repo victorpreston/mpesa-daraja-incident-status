@@ -1,0 +1,27 @@
+{
+  "name": "daraja-monitor-sdk",
+  "version": "1.0.0",
+  "description": "Report Daraja M-Pesa API failures anonymously to help power a community-driven Safaricom status page",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": ["dist", "README.md"],
+  "scripts": {
+    "build": "tsc",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": ["daraja", "mpesa", "safaricom", "monitoring", "status", "incident"],
+  "author": "Victor Preston <vp.prestonvictor@gmail.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/victorpreston/daraja-incident-status"
+  },
+  "peerDependencies": {
+    "axios": ">=1.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "axios": "^1.13.6",
+    "typescript": "^5.7.3"
+  }
+}

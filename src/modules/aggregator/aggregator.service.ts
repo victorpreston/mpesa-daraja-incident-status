@@ -2,6 +2,7 @@ import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { KafkaService } from '../kafka/kafka.service';
 import { PostgresService } from '../postgres/postgres.service';
+import { RedisService } from '../redis/redis.service';
 import { IncidentCreatedEvent } from '../kafka/events/incident-created.event';
 import { IncidentResolvedEvent } from '../kafka/events/incident-resolved.event';
 import { ProbeResultEvent } from '../kafka/events/probe-result.event';
@@ -21,6 +22,7 @@ export class AggregatorService implements OnModuleInit {
     private readonly config: ConfigService,
     private readonly postgres: PostgresService,
     private readonly kafka: KafkaService,
+    private readonly redis: RedisService,
   ) {}
 
   async onModuleInit() {
@@ -29,6 +31,20 @@ export class AggregatorService implements OnModuleInit {
     await this.kafka.subscribe(
       `${group}-aggregator`,
       TOPICS.PROBE_RESULT,
+      async (payload) => {
+        await this.handleProbeResult(payload as ProbeResultEvent);
+      },
+    );
+    await this.kafka.subscribe(
+      `${group}-aggregator-callbacks`,
+      TOPICS.PROBE_CALLBACKS,
+      async (payload) => {
+        await this.handleProbeResult(payload as ProbeResultEvent);
+      },
+    );
+    await this.kafka.subscribe(
+      `${group}-aggregator-telemetry`,
+      TOPICS.PROBE_TELEMETRY,
       async (payload) => {
         await this.handleProbeResult(payload as ProbeResultEvent);
       },
@@ -134,7 +150,7 @@ export class AggregatorService implements OnModuleInit {
       `Incident opened for ${event.serviceName}: ${String(incidentRecord['id'])}`,
     );
 
-    await this.kafka.publish<IncidentCreatedEvent>(TOPICS.INCIDENT_CREATED, {
+    const incidentPayload: IncidentCreatedEvent = {
       incidentId: String(incidentRecord['id']),
       serviceId: event.serviceId,
       serviceName: event.serviceName,
@@ -142,7 +158,16 @@ export class AggregatorService implements OnModuleInit {
       severity,
       status: 'investigating',
       startedAt: new Date().toISOString(),
-    });
+    };
+
+    await this.kafka.publish<IncidentCreatedEvent>(
+      TOPICS.INCIDENT_CREATED,
+      incidentPayload,
+    );
+    await this.redis.publish(
+      TOPICS.INCIDENT_CREATED,
+      JSON.stringify(incidentPayload),
+    );
   }
 
   private async resolveIncident(
@@ -160,11 +185,20 @@ export class AggregatorService implements OnModuleInit {
 
     this.logger.log(`Incident resolved: ${String(incident['id'])}`);
 
-    await this.kafka.publish<IncidentResolvedEvent>(TOPICS.INCIDENT_RESOLVED, {
+    const resolvedPayload: IncidentResolvedEvent = {
       incidentId: String(incident['id']),
       serviceId: String(incident['service_id']),
       serviceName: '',
       resolvedAt: new Date().toISOString(),
-    });
+    };
+
+    await this.kafka.publish<IncidentResolvedEvent>(
+      TOPICS.INCIDENT_RESOLVED,
+      resolvedPayload,
+    );
+    await this.redis.publish(
+      TOPICS.INCIDENT_RESOLVED,
+      JSON.stringify(resolvedPayload),
+    );
   }
 }

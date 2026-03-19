@@ -14,7 +14,7 @@ export class IncidentsService {
     if (query.serviceId) builder.where({ service_id: query.serviceId });
     if (query.status) builder.where({ status: query.status });
     if (query.severity) builder.where({ severity: query.severity });
-    return builder as unknown as Incident[];
+    return (await builder) as unknown as Incident[];
   }
 
   async findOne(id: string): Promise<Incident | null> {

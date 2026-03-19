@@ -12,6 +12,8 @@ import { ProbesModule } from './modules/probes/probes.module';
 import { RedisModule } from './modules/redis/redis.module';
 import { StatusModule } from './modules/status/status.module';
 import { SubscribersModule } from './modules/subscribers/subscribers.module';
+import { HistoryModule } from './modules/history/history.module';
+import { TelemetryModule } from './modules/telemetry/telemetry.module';
 
 @Module({
   imports: [
@@ -26,6 +28,8 @@ import { SubscribersModule } from './modules/subscribers/subscribers.module';
     NotifierModule,
     SubscribersModule,
     StatusModule,
+    HistoryModule,
+    TelemetryModule,
   ],
   controllers: [AppController],
   providers: [AppService],

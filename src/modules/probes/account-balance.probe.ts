@@ -1,21 +1,26 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
 import { KafkaService } from '../kafka/kafka.service';
 import { PostgresService } from '../postgres/postgres.service';
 import { ProbeResultEvent } from '../kafka/events/probe-result.event';
 import { TOPICS } from '../kafka/topics';
+import { DarajaTokenService } from './daraja-token.service';
 import { ProbeRunner } from './probes.scheduler';
 
 @Injectable()
 export class AccountBalanceProbe implements ProbeRunner {
+  private readonly logger = new Logger(AccountBalanceProbe.name);
+
   constructor(
     private readonly config: ConfigService,
     private readonly postgres: PostgresService,
     private readonly kafka: KafkaService,
+    private readonly darajaToken: DarajaTokenService,
   ) {}
 
   async run(): Promise<void> {
+    this.logger.log('account-balance: running');
     const serviceId = await this.getServiceId();
     const start = Date.now();
     let status: 'success' | 'failure' = 'success';
@@ -23,37 +28,58 @@ export class AccountBalanceProbe implements ProbeRunner {
     let responseBody: Record<string, unknown> | undefined;
 
     try {
-      const token = await this.getToken();
+      const token = await this.darajaToken.getToken();
       const shortcode = this.config.get<string>('DARAJA_SHORTCODE')!;
       const response = await axios.post<Record<string, unknown>>(
         'https://sandbox.safaricom.co.ke/mpesa/accountbalance/v1/query',
         {
-          Initiator: 'testapi',
-          SecurityCredential: 'probe',
+          Initiator: this.config.get<string>('DARAJA_INITIATOR_NAME')!,
+          SecurityCredential: this.config.get<string>(
+            'DARAJA_SECURITY_CREDENTIAL',
+          )!,
           CommandID: 'AccountBalance',
           PartyA: shortcode,
           IdentifierType: '4',
           Remarks: 'Probe',
-          QueueTimeOutURL: `${this.config.get<string>('CALLBACK_BASE_URL')}/daraja/callback`,
-          ResultURL: `${this.config.get<string>('CALLBACK_BASE_URL')}/daraja/callback`,
+          QueueTimeOutURL: this.config.get<string>('DARAJA_CALLBACK_URL')!,
+          ResultURL: this.config.get<string>('DARAJA_CALLBACK_URL')!,
         },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-          timeout: 15000,
-        },
+        { headers: this.darajaToken.headers(token), timeout: 15000 },
       );
       responseBody = response.data;
+      this.logger.log(
+        `account-balance: HTTP ${response.status} | ${JSON.stringify(responseBody).slice(0, 500)}`,
+      );
       const responseCode = response.data['ResponseCode'];
       if (responseCode !== '0') {
         status = 'failure';
-        errorMessage = `ResponseCode: ${String(responseCode)}`;
+        errorMessage = 'ResponseCode: ' + String(responseCode);
       }
     } catch (err: unknown) {
       status = 'failure';
-      if (err instanceof Error) errorMessage = err.message;
+      if (axios.isAxiosError(err)) {
+        errorMessage = err.message;
+        responseBody = err.response?.data as
+          | Record<string, unknown>
+          | undefined;
+        this.logger.error(
+          `account-balance: HTTP ${err.response?.status ?? 'ERR'} ${err.config?.url ?? ''}`,
+          JSON.stringify(err.response?.data ?? '').slice(0, 2000),
+        );
+      } else if (err instanceof Error) {
+        errorMessage = err.message;
+        this.logger.error(`account-balance: ${err.message}`);
+      }
     }
 
     const latencyMs = Date.now() - start;
+    if (status === 'success') {
+      this.logger.log(`account-balance: success | ${latencyMs}ms`);
+    } else {
+      this.logger.error(
+        `account-balance: failure | ${latencyMs}ms | ${errorMessage}`,
+      );
+    }
     await this.saveResult(
       serviceId,
       status,
@@ -71,18 +97,6 @@ export class AccountBalanceProbe implements ProbeRunner {
       responseBody,
       timestamp: new Date().toISOString(),
     });
-  }
-
-  private async getToken(): Promise<string> {
-    const key = this.config.get<string>('DARAJA_CONSUMER_KEY')!;
-    const secret = this.config.get<string>('DARAJA_CONSUMER_SECRET')!;
-    const url = this.config.get<string>('DARAJA_AUTH_URL')!;
-    const credentials = Buffer.from(`${key}:${secret}`).toString('base64');
-    const res = await axios.get<{ access_token: string }>(url, {
-      headers: { Authorization: `Basic ${credentials}` },
-      timeout: 10000,
-    });
-    return res.data.access_token;
   }
 
   private async getServiceId(): Promise<string> {

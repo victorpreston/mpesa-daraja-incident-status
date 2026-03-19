@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { KafkaService } from '../kafka/kafka.service';
+import { PostgresService } from '../postgres/postgres.service';
 import { ProbeResultEvent } from '../kafka/events/probe-result.event';
 import { TOPICS } from '../kafka/topics';
 
@@ -7,7 +8,18 @@ import { TOPICS } from '../kafka/topics';
 export class CallbackService {
   private readonly logger = new Logger(CallbackService.name);
 
-  constructor(private readonly kafka: KafkaService) {}
+  constructor(
+    private readonly kafka: KafkaService,
+    private readonly postgres: PostgresService,
+  ) {}
+
+  private async getServiceId(name: string): Promise<string> {
+    const row = await this.postgres
+      .db('daraja.services')
+      .where({ name })
+      .first();
+    return (row?.id as string) ?? '';
+  }
 
   async handle(body: Record<string, unknown>): Promise<void> {
     this.logger.log(`Daraja callback received: ${JSON.stringify(body)}`);
@@ -20,8 +32,9 @@ export class CallbackService {
     if (stkCallback) {
       const resultCode = stkCallback['ResultCode'];
       const status = resultCode === 0 ? 'success' : 'failure';
+      const serviceId = await this.getServiceId('STK Push');
       const event: ProbeResultEvent = {
-        serviceId: '',
+        serviceId,
         serviceName: 'STK Push',
         probeType: 'stk-push-callback',
         status,
@@ -41,9 +54,12 @@ export class CallbackService {
     if (result) {
       const resultCode = result['ResultCode'];
       const status = resultCode === 0 ? 'success' : 'failure';
+      const resultType = result['TransactionType'] as string | undefined;
+      const serviceName = resultType === 'BusinessPayment' ? 'B2C' : 'B2C';
+      const serviceId = await this.getServiceId(serviceName);
       const event: ProbeResultEvent = {
-        serviceId: '',
-        serviceName: 'B2C',
+        serviceId,
+        serviceName,
         probeType: 'b2c-callback',
         status,
         latencyMs: 0,

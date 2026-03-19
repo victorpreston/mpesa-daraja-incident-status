@@ -73,7 +73,7 @@ export class StkPushProbe implements ProbeRunner {
           | undefined;
         this.logger.error(
           `stk-push: HTTP ${err.response?.status ?? 'ERR'} ${err.config?.url ?? ''}`,
-          JSON.stringify(err.response?.data).slice(0, 2000),
+          JSON.stringify(err.response?.data ?? '').slice(0, 2000),
         );
       } else if (err instanceof Error) {
         errorMessage = err.message;

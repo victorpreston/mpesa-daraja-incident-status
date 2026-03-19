@@ -59,7 +59,7 @@ export class C2bPaybillProbe implements ProbeRunner {
           | undefined;
         this.logger.error(
           `c2b-paybill: HTTP ${err.response?.status ?? 'ERR'} ${err.config?.url ?? ''}`,
-          JSON.stringify(err.response?.data).slice(0, 2000),
+          JSON.stringify(err.response?.data ?? '').slice(0, 2000),
         );
       } else if (err instanceof Error) {
         errorMessage = err.message;

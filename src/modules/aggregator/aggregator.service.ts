@@ -42,6 +42,13 @@ export class AggregatorService implements OnModuleInit {
         await this.handleProbeResult(payload as ProbeResultEvent);
       },
     );
+    await this.kafka.subscribe(
+      `${group}-aggregator-telemetry`,
+      TOPICS.PROBE_TELEMETRY,
+      async (payload) => {
+        await this.handleProbeResult(payload as ProbeResultEvent);
+      },
+    );
   }
 
   private async handleProbeResult(event: ProbeResultEvent): Promise<void> {

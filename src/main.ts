@@ -25,6 +25,7 @@ async function bootstrap() {
     .addTag('incidents', 'Incident history and detail with timeline updates')
     .addTag('subscribers', 'Subscribe to and unsubscribe from incident alerts')
     .addTag('callbacks', 'Daraja M-Pesa callback receiver')
+    .addTag('telemetry', 'Community failure reports from daraja-monitor-sdk')
     .build();
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('docs', app, document, {

@@ -13,6 +13,7 @@ import { RedisModule } from './modules/redis/redis.module';
 import { StatusModule } from './modules/status/status.module';
 import { SubscribersModule } from './modules/subscribers/subscribers.module';
 import { HistoryModule } from './modules/history/history.module';
+import { TelemetryModule } from './modules/telemetry/telemetry.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { HistoryModule } from './modules/history/history.module';
     SubscribersModule,
     StatusModule,
     HistoryModule,
+    TelemetryModule,
   ],
   controllers: [AppController],
   providers: [AppService],

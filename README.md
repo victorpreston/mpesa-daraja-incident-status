@@ -1,98 +1,137 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Daraja Incident Status
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+A real-time incident monitoring system for the Safaricom Daraja M-Pesa API. Probes all major Daraja endpoints on a schedule, aggregates results through a Kafka event pipeline, automatically opens and resolves incidents, and fans out notifications to subscribers across multiple channels.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+---
 
-## Description
+## System Overview
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+![System Overview](docs/daraja_status_system_overview.svg)
 
-## Project setup
+The system is composed of independent NestJS modules connected via Kafka topics and Redis pub/sub:
+
+- **Probes** fire synthetic requests against all 7 Daraja API surfaces every 30 seconds
+- **Aggregator** consumes probe results, maintains health scores, and opens/resolves incidents
+- **Notifier** listens for incident events and dispatches alerts to all active subscribers
+- **Status** serves a live summary over HTTP and pushes real-time updates over WebSocket
+- **History** persists every Kafka event to TimescaleDB for time-series analysis
+
+---
+
+## Incident Flow
+
+![Incident Flow](docs/daraja_probe_to_incident_flow.svg)
+
+When a probe fails:
+
+1. The probe publishes a `probe.result` event to Kafka with `status: failure`
+2. The Aggregator increments the failure window for that service
+3. Once failures reach the threshold (default: 3), an incident is opened in Postgres and a `incident.created` event is published
+4. The affected service status is updated to `degraded_performance` or `major_outage` depending on severity
+5. When a subsequent probe succeeds, the failure window resets, the incident is resolved, and a `incident.resolved` event is published
+6. Redis pub/sub broadcasts both events to the WebSocket gateway for live UI updates
+
+---
+
+## Notification Fanout
+
+![Notification Fanout](docs/daraja_notification_fanout.svg)
+
+Subscribers register once and receive alerts across any combination of channels:
+
+- **Email** via SMTP
+- **Slack** via incoming webhooks
+- **Discord** via webhooks
+- **Custom webhook** — any HTTP endpoint receives a structured JSON payload
+
+Each notification attempt is recorded in Postgres with delivery status and any error detail.
+
+---
+
+## Highlights
+
+**7 Daraja endpoints monitored**
+STK Push, OAuth, C2B Paybill, B2C, Account Balance, Transaction Status, and Reversal — each probed independently so partial outages are visible at the service level.
+
+**Event-driven pipeline**
+Probes, aggregation, incident lifecycle, notifications, and history are all decoupled via Kafka. Each concern runs in its own consumer group and can be scaled independently.
+
+**TimescaleDB for probe history**
+`probe_results` and `event_log` are TimescaleDB hypertables — time-series queries over probe history are fast without manual partitioning.
+
+**Real-time WebSocket updates**
+The `/status` Socket.IO namespace broadcasts `status_update` events whenever an incident opens or resolves, so a frontend dashboard stays live without polling.
+
+**Automatic incident lifecycle**
+Incidents open and resolve automatically based on probe results — no manual intervention required. Failure threshold and probe interval are configurable via environment variables.
+
+**Multi-channel notifications**
+A single subscriber can receive alerts on all four channels simultaneously. The notifier fan-out is per-channel and each delivery is logged individually.
+
+---
+
+## API Documentation
+
+Swagger UI is available at `/docs` when the server is running.
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/status` | System health summary for all services |
+| `GET` | `/incidents` | List incidents (filter by service, status, severity) |
+| `GET` | `/incidents/:id` | Incident detail with timeline updates |
+| `POST` | `/subscribe` | Register a new subscriber |
+| `DELETE` | `/subscribe/:id` | Deactivate a subscriber |
+| `POST` | `/daraja/callback` | Daraja M-Pesa callback receiver |
+
+---
+
+## Stack
+
+| Layer | Technology |
+|-------|-----------|
+| Framework | NestJS 11, TypeScript |
+| Database | PostgreSQL 16 + TimescaleDB |
+| Message broker | Redpanda (Kafka-compatible) |
+| Cache / pub-sub | Redis 7 |
+| Query builder | Knex |
+| Real-time | Socket.IO |
+| Notifications | Nodemailer, Axios (Slack/Discord/webhook) |
+
+---
+
+## Local Setup
 
 ```bash
-$ npm install
+cp .env.example .env
+# fill in your Daraja credentials and other values
+
+docker compose up -d
+
+npm install
+npm run db:migrate
+npm run db:seed
+
+npm run start:dev
 ```
 
-## Compile and run the project
+---
 
-```bash
-# development
-$ npm run start
+## Environment Variables
 
-# watch mode
-$ npm run start:dev
+| Variable | Description |
+|----------|-------------|
+| `DARAJA_CONSUMER_KEY` | Daraja app consumer key |
+| `DARAJA_CONSUMER_SECRET` | Daraja app consumer secret |
+| `DARAJA_SHORTCODE` | Default business shortcode |
+| `DARAJA_STK_SHORTCODE` | STK Push shortcode (Lipa Na M-Pesa) |
+| `DARAJA_PASSKEY` | STK Push passkey |
+| `DARAJA_CALLBACK_URL` | Publicly reachable HTTPS URL for Daraja callbacks |
+| `PROBE_INTERVAL_SECONDS` | How often probes run (default: `30`) |
+| `PROBE_FAILURE_THRESHOLD` | Consecutive failures before incident opens (default: `3`) |
+| `PROBE_ENABLED` | Set to `false` to disable probing entirely |
 
-# production mode
-$ npm run start:prod
-```
-
-## Run tests
-
-```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
-```
-
-## Deployment
-
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
-
-```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
-```
-
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
-
-## Resources
-
-Check out a few resources that may come in handy when working with NestJS:
-
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
-
-## Support
-
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+---
 
 ## License
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+MIT

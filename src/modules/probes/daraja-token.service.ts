@@ -6,6 +6,7 @@ import axios from 'axios';
 export class DarajaTokenService {
   private readonly logger = new Logger(DarajaTokenService.name);
   private cached: { token: string; expiresAt: number } | null = null;
+  private inflight: Promise<string> | null = null;
 
   constructor(private readonly config: ConfigService) {}
 
@@ -13,11 +14,21 @@ export class DarajaTokenService {
     if (this.cached && Date.now() < this.cached.expiresAt) {
       return this.cached.token;
     }
+    if (!this.inflight) {
+      this.inflight = this.fetchToken().finally(() => {
+        this.inflight = null;
+      });
+    }
+    return this.inflight;
+  }
 
+  private async fetchToken(): Promise<string> {
     const key = this.config.get<string>('DARAJA_CONSUMER_KEY')!;
     const secret = this.config.get<string>('DARAJA_CONSUMER_SECRET')!;
     const url = this.config.get<string>('DARAJA_AUTH_URL')!;
     const credentials = Buffer.from(`${key}:${secret}`).toString('base64');
+
+    this.logger.log(`Fetching OAuth token from ${url}`);
 
     const res = await axios.get<{ access_token: string; expires_in: string }>(
       url,
@@ -25,11 +36,16 @@ export class DarajaTokenService {
         headers: {
           Authorization: `Basic ${credentials}`,
           Accept: 'application/json',
-          'User-Agent': 'daraja-status-monitor/1.0',
         },
         timeout: 10000,
       },
     );
+
+    if (typeof res.data?.access_token !== 'string') {
+      throw new Error(
+        `Unexpected OAuth response: ${JSON.stringify(res.data).slice(0, 500)}`,
+      );
+    }
 
     const expiresIn = parseInt(res.data.expires_in ?? '3599', 10);
     this.cached = {
@@ -46,7 +62,6 @@ export class DarajaTokenService {
       Authorization: `Bearer ${token}`,
       Accept: 'application/json',
       'Content-Type': 'application/json',
-      'User-Agent': 'daraja-status-monitor/1.0',
     };
   }
 }

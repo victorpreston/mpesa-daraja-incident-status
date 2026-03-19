@@ -33,7 +33,7 @@ export class CallbackService {
         responseBody: body,
         timestamp: new Date().toISOString(),
       };
-      await this.kafka.publish<ProbeResultEvent>(TOPICS.PROBE_RESULT, event);
+      await this.kafka.publish<ProbeResultEvent>(TOPICS.PROBE_CALLBACKS, event);
       return;
     }
 
@@ -54,7 +54,7 @@ export class CallbackService {
         responseBody: body,
         timestamp: new Date().toISOString(),
       };
-      await this.kafka.publish<ProbeResultEvent>(TOPICS.PROBE_RESULT, event);
+      await this.kafka.publish<ProbeResultEvent>(TOPICS.PROBE_CALLBACKS, event);
     }
   }
 }

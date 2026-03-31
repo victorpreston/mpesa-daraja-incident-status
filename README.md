@@ -2,7 +2,6 @@
 
 A real-time incident monitoring system for the Safaricom Daraja M-Pesa API. Probes all major Daraja endpoints on a schedule, aggregates results through a Kafka event pipeline, automatically opens and resolves incidents, and fans out notifications to subscribers across multiple channels.
 
----
 
 ## System Overview
 
@@ -16,7 +15,6 @@ The system is composed of independent NestJS modules connected via Kafka topics 
 - **Status** serves a live summary over HTTP and pushes real-time updates over WebSocket
 - **History** persists every Kafka event to TimescaleDB for time-series analysis
 
----
 
 ## Incident Flow
 
@@ -31,7 +29,6 @@ When a probe fails:
 5. When a subsequent probe succeeds, the failure window resets, the incident is resolved, and a `incident.resolved` event is published
 6. Redis pub/sub broadcasts both events to the WebSocket gateway for live UI updates
 
----
 
 ## Notification Fanout
 
@@ -46,7 +43,6 @@ Subscribers register once and receive alerts across any combination of channels:
 
 Each notification attempt is recorded in Postgres with delivery status and any error detail.
 
----
 
 ## Highlights
 
@@ -71,7 +67,6 @@ A single subscriber can receive alerts on all four channels simultaneously. The 
 **Community telemetry via SDK**
 Developers building on Daraja can install `daraja-monitor-sdk` to anonymously contribute real production failure data. Reports flow through the same Kafka aggregator pipeline and influence health scores alongside synthetic probes.
 
----
 
 ## API Documentation
 
@@ -87,7 +82,6 @@ Swagger UI is available at `/docs` when the server is running.
 | `POST` | `/daraja/callback` | Daraja M-Pesa callback receiver |
 | `POST` | `/telemetry` | Ingest anonymous failure report from SDK |
 
----
 
 ## Stack
 
@@ -101,7 +95,6 @@ Swagger UI is available at `/docs` when the server is running.
 | Real-time | Socket.IO |
 | Notifications | Nodemailer, Axios (Slack/Discord/webhook) |
 
----
 
 ## Local Setup
 
@@ -118,7 +111,6 @@ npm run db:seed
 npm run start:dev
 ```
 
----
 
 ## Environment Variables
 
@@ -134,7 +126,6 @@ npm run start:dev
 | `PROBE_FAILURE_THRESHOLD` | Consecutive failures before incident opens (default: `3`) |
 | `PROBE_ENABLED` | Set to `false` to disable probing entirely |
 
----
 
 ## Community SDK
 
@@ -142,7 +133,6 @@ Developers building on Daraja can install [`daraja-monitor-sdk`](sdk/README.md) 
 
 See [`sdk/README.md`](sdk/README.md) for installation and usage.
 
----
 
 ## License
 
